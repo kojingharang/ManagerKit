@@ -141,17 +141,19 @@ def genProjectListHtml(projects, status_master):
 		statusTitles = "".join([ statusCell(p.status, name, label) for name, label in status_master])
 		trCol = "white" if i%2==0 else "#f0f0f0"
 		index = i+1
-		note = ""
+		owner_note = ""
+		doc_note = ""
 		if p.orig_owner=="":
-			note = "(TODO 主担当決め)"
+			owner_note = "(仮)"
+			doc_note = "(TODO 主担当決め)"
 		html += """
 <tr style="background-color: {trCol}">
 	<td>{index}</td>
 	<td>{p.priority}</td>
 	<td>{title}</td>
 	{statusTitles}
-	<td>{p.owner}</td>
-	<td>{p.doc}{note}<span style="color: red;">{p.blocking}</span></td>
+	<td>{p.owner}{owner_note}</td>
+	<td>{p.doc}{doc_note}<span style="color: red;">{p.blocking}</span></td>
 	<td style="font-size: 0.5em;">{schedule}</td>
 </tr>
 """.format(**vars())
