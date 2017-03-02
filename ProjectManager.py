@@ -114,7 +114,7 @@ def genProjectListHtml(projects, status_master):
 	html = """
 <html><body><table class="projects">
 <tr class="title">
-	<td style="width: 5%;">優先順位</td>
+	<td style="width: 5%;">番号</td>
 	<td style="width: 5%;">優先度</td>
 	<td>プロジェクト名</td>
 	{statusTitles}
