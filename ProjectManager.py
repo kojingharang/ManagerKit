@@ -26,9 +26,10 @@ doc:
 	メモ
 """
 class Project:
-	def __init__(self, title, url, owner, priority, status, days,
+	def __init__(self, codeName="", title="", url="", owner="", priority=100, status={}, days=0,
 		startDate=None, endDate=None, blocking="", doc=""):
 		self.index = 0
+		self.codeName = codeName
 		self.title = title
 		self.url = url
 		self.owner = owner
@@ -150,7 +151,7 @@ def genProjectListHtml(projects, status_master):
 <tr style="background-color: {trCol}">
 	<td>{index}</td>
 	<td>{p.priority}</td>
-	<td>{title}</td>
+	<td><span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">{p.codeName}</span><br>{title}</td>
 	{statusTitles}
 	<td>{p.owner}{owner_note}</td>
 	<td>{p.doc}{doc_note}<span style="color: red;">{p.blocking}</span></td>
@@ -373,6 +374,19 @@ def genScheduleHtml(projects, schedule, people):
 
 
 def run(projects, people, status_master, project_list_header="", schedule_header="", filename="status.html"):
+	codeNames = {}
+	for p in projects:
+		codeNames.setdefault(p.codeName, 0)
+		codeNames[p.codeName] += 1
+	bad = False
+	for k, v in codeNames.items():
+		if 1 < v:
+			print("[ERROR] Duplicate code name:", k, "(", v, "projects)")
+			bad = True
+	if bad:
+		print()
+		return
+	
 	for i, p in enumerate(projects):
 		p.index = i
 		if p.owner and p.owner not in people:

@@ -40,6 +40,7 @@ Project
 """
 projects = [
 	ProjectManager.Project(
+		codeName  = "BKK",
 		title     = "バンコク旅行",
 		url       = "",
 		owner     = "Foo",
@@ -60,6 +61,7 @@ projects = [
 	),
 
 	ProjectManager.Project(
+		codeName  = "SING",
 		title     = "シンガポール旅行",
 		url       = "",
 		owner     = "Foo",
@@ -80,6 +82,7 @@ projects = [
 	),
 
 	ProjectManager.Project(
+		codeName  = "HK",
 		title     = "香港旅行",
 		url       = "",
 		owner     = "",
@@ -101,6 +104,7 @@ projects = [
 
 
 	ProjectManager.Project(
+		codeName  = "BKK2",
 		title     = "バンコク旅行",
 		url       = "",
 		owner     = "Bar",
