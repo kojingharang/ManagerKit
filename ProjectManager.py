@@ -46,6 +46,16 @@ class Project:
 	def isDone(self):
 		return self.status["End"]=="v"
 
+	def doing(self):
+		sd = self.startDate
+		if sd is None:
+			sd = datetime.date(3000, 1, 1)
+		ed = self.endDate
+		if ed is None:
+			ed = datetime.date(3000, 1, 1)
+		now = datetime.date.today()
+		return sd <= now and now <= ed
+
 	def fixed(self):
 		return self.owner != "" and self.startDate is not None and self.endDate is not None
 
@@ -141,6 +151,7 @@ def genProjectListHtml(projects, status_master):
 #		status = StatusDetail(p.status)
 		statusTitles = "".join([ statusCell(p.status, name, label) for name, label in status_master])
 		trCol = "white" if i%2==0 else "#f0f0f0"
+		schedule_bg = "background-color: "+colorDoing+";" if p.doing() else ""
 		index = i+1
 		owner_note = ""
 		doc_note = ""
@@ -155,7 +166,7 @@ def genProjectListHtml(projects, status_master):
 	{statusTitles}
 	<td>{p.owner}{owner_note}</td>
 	<td>{p.doc}{doc_note}<span style="color: red;">{p.blocking}</span></td>
-	<td style="font-size: 0.5em;">{schedule}</td>
+	<td style="font-size: 0.5em;{schedule_bg}">{schedule}</td>
 </tr>
 """.format(**vars())
 	html += """
@@ -306,8 +317,6 @@ def genScheduleHtml(projects, schedule, people):
 
 	# プロジェクト設置
 	for i, (person, ps) in enumerate(sorted(schedule.items())):
-		table[0][i+1] = [person, "width: %f; background-color: #e0e0e0".format(**vars())]
-#		print(person)
 		for p in ps:
 #			print(p.startDate, p.endDate)
 			si = p.startDate.toordinal()
@@ -352,6 +361,19 @@ def genScheduleHtml(projects, schedule, people):
 		table[d][0] = [s, style]
 
 	table = [ table[k] for k in sorted(table.keys()) ]
+#	pprint.pprint(table)
+
+	def createHeader():
+		"""
+		メンバー見出しを生成
+		"""
+		row = [["", ""]]
+		for i, (person, ps) in enumerate(sorted(schedule.items())):
+			row.append([person, "width: %f; background-color: #e0e0e0".format(**vars())])
+		return row
+
+	for i in range(0, len(table), 10):
+		table.insert(i, createHeader())
 
 	def tableToHtml(table):
 		html = "<table class='schedule'>"
@@ -373,7 +395,7 @@ def genScheduleHtml(projects, schedule, people):
 
 
 
-def run(projects, people, status_master, project_list_header="", schedule_header="", filename="status.html"):
+def run(projects, people, status_master, css="", project_list_header="", schedule_header="", filename="status.html"):
 	codeNames = {}
 	for p in projects:
 		codeNames.setdefault(p.codeName, 0)
@@ -429,7 +451,7 @@ table.schedule {
 table.schedule tr td {
 	padding: 0;
 }
-"""
+""" + css
 
 	example = """
 <table class="example"><tr>
@@ -448,8 +470,6 @@ table.schedule tr td {
 </head>
 <body>
 
-<h1>プロジェクト一覧</h1>
-
 {project_list_header}
 
 <br><br>
@@ -459,8 +479,6 @@ table.schedule tr td {
 {projectsHtml}
 
 <br><br>
-
-<h1>開発スケジュール</h1>
 
 {schedule_header}
 
