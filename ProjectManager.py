@@ -464,6 +464,7 @@ table.schedule tr td {
 	html = """
 <html>
 <head>
+<meta charset="utf-8" />
 <style>
 {css}
 </style>

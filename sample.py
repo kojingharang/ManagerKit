@@ -126,13 +126,21 @@ projects = [
 
 ]
 
+css = """
+.grad {
+	background: linear-gradient(to bottom, rgba(62,140,72,1) 0%,rgba(68,148,80,1) 50%,rgba(43,119,54,1) 51%,rgba(34,112,44,1) 100%);
+}
+"""
+
 project_list_header = """
+<h1 class="grad">プロジェクト一覧</h1>
 <ul>
 <li> (ただし書きとかはここに書く)
 </ul>
 """
 
 schedule_header = """
+<h1 class="grad">開発スケジュール</h1>
 <ul>
 <li> (ただし書きとかはここに書く)
 </ul>
@@ -150,5 +158,5 @@ status_master = [
 ]
 # プロジェクト一覧, スケジュールが含まれる sample.html を生成する
 filename = "sample.html"
-ProjectManager.run(projects, people, status_master, project_list_header, schedule_header, filename)
+ProjectManager.run(projects, people, status_master, css, project_list_header, schedule_header, filename)
 
