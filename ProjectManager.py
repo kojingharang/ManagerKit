@@ -4,6 +4,15 @@ import pprint
 import sys
 import copy
 
+def expandStatusValue(v):
+	"""
+	v : string | (string, datetime.date | None)
+	が string だった場合 (string, None) に展開する.
+	"""
+	if isinstance(v, str):
+		v = (v, None)
+	return v
+
 """
 title:
 	プロジェクト名
@@ -24,10 +33,12 @@ blocking:
 	着手できない理由
 doc:
 	メモ
+milestones:
+	(finishDate : datetime.date | None, title : string)[]
 """
 class Project:
 	def __init__(self, codeName="", title="", url="", owner="", priority=100, status={}, days=0,
-		startDate=None, endDate=None, blocking="", doc=""):
+		startDate=None, endDate=None, blocking="", doc="", milestones=[], epic=""):
 		self.index = 0
 		self.codeName = codeName
 		self.title = title
@@ -35,16 +46,19 @@ class Project:
 		self.owner = owner
 		self.orig_owner = owner
 		self.priority = priority
-		self.status = status
+		self.status = dict([(k, expandStatusValue(v)) for k, v in status.items()])
+#		pprint.pprint(self.status)
 		self.days = days
 		self.startDate = startDate
 		self.endDate = endDate
 		self.doc = doc
 		self.blocking = blocking
 		self.put = False
+		self.milestones = milestones
+		self.epic = epic
 
 	def isDone(self):
-		return self.status["End"]=="v"
+		return self.status["End"][0]=="v"
 
 	def doing(self):
 		sd = self.startDate
@@ -104,19 +118,24 @@ def hsv2rgb(hsv):
 def rgb2hex(rgb):
 	return "#%02x%02x%02x" % (int(rgb[0]*255), int(rgb[1]*255), int(rgb[2]*255))
 
+
+
 def statusCell(st, name, label):
-	s = st[name]
+	s, endDate = st[name]
 	col = ""
-	if s=="o":
-		col = colorDoing
 	if s=="v":
 		col = colorDone
+	if s=="o":
+		col = colorDoing
 	style=""
 	if col:
 		style = "background-color: {col};".format(**vars())
-	return """<td style="{style}"> </td>""".format(**vars())
+	text = " "
+	if endDate:
+		text = "<span style='font-size: 0.7em;'>{endDate.year:04}-{endDate.month:02}-{endDate.day:02}</span>".format(**vars())
+	return """<td style="{style}">{text}</td>""".format(**vars())
 
-def genProjectListHtml(projects, status_master):
+def genProjectListHtml(projects, status_master, ticketLinkFun):
 	def sortFun(v):
 		return v.priority + (1000 if v.isDone() else 0) + (500 if v.blocking else 0)
 	projects = sorted(projects, key=sortFun)
@@ -158,11 +177,16 @@ def genProjectListHtml(projects, status_master):
 		if p.orig_owner=="":
 			owner_note = "(仮)"
 			doc_note = "(TODO 主担当決め)"
+		tasks = ""
+		if p.epic:
+			link = ticketLinkFun(p.epic)
+			style = """background-color: darkgreen; color: white; text-decoration: none; font-size: 0.8em; padding: 4px; border-radius: 10px;"""
+			tasks = """<a href="{link}" target="_blank" style="{style}">Tasks</a>""".format(**vars())
 		html += """
 <tr style="background-color: {trCol}">
 	<td>{index}</td>
 	<td>{p.priority}</td>
-	<td><span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">{p.codeName}</span><br>{title}</td>
+	<td><span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">{p.codeName}</span> {tasks}<br>{title}</td>
 	{statusTitles}
 	<td>{p.owner}{owner_note}</td>
 	<td>{p.doc}{doc_note}<span style="color: red;">{p.blocking}</span></td>
@@ -209,7 +233,7 @@ def assign(projects, people):
 	# 担当者に割り当てた上で各PJがいつ終わるかというスケジュール表(担当者 x PJの表)
 	# TODO startDate がきまってるやつを最初に置く
 	# 担当者 -> 着手可能日付
-	freeDates = dict([(p, datetime.date.min) for p in people])
+	freeDates = dict([(p, datetime.date.min) for p, _ in people])
 	# owner -> {startDate, project}[]
 	schedule = {}
 	"""
@@ -286,7 +310,7 @@ def assign(projects, people):
 						print("[CONFLICT]", p.title, p.startDate, p.endDate, p.owner, "AND", pp.title, pp.startDate, pp.endDate, pp.owner)
 	return schedule
 
-def genScheduleHtml(projects, schedule, people):
+def genScheduleHtml(projects, schedule, people, ticketLinkFun):
 	# date x 担当者
 	allDates = [ d for ps in schedule.values() for p in ps for d in [p.startDate, p.endDate]]
 	minDate = min(allDates)
@@ -390,12 +414,67 @@ def genScheduleHtml(projects, schedule, people):
 
 ######################
 
+def createTasksHtml(titleAndEpics, members, ticketLinkFun):
+	def entry(label, url):
+		return """<a href="{url}" target="main_frame">{label}</a>""".format(**vars())
+
+	epics = [ epic for _, epic in titleAndEpics ]
+	epicHtml = "　".join([ entry(title, ticketLinkFun(epic)) for title, epic in titleAndEpics ])
+	memberHtml = "　".join([ entry(name, ticketLinkFun("", name)) for name in members ])
+	memberNotInEpicsHtml = "　".join([ entry(name, ticketLinkFun("", name, "", epics)) for name in members ])
+	notInEpicsHtml = entry("管理Epicに関連付けられてないチケット", ticketLinkFun("", "", "", epics))
+
+	html = """
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+</head>
+<frameset rows="100px,*" frameborder=1 border=1>
+	<frame name="menu_frame" src="menu.html">
+	<frame name="main_frame" src="">
+</frameset>
+</html>
+""".format(**vars())
+
+	filename = "tasks.html"
+	with open(filename, "w") as f:
+		print(html, file=f)
+	print("[ProjectManager.createTasksHtml] OK. Wrote", filename)
+
+	html = """
+<html>
+<head>
+<meta charset="UTF-8">
+</head>
+<body style="margin: 0; font-size: 0.7em;">
+Projects : {epicHtml}<br>
+Members : {memberHtml}<br>
+Members (管理Epicに関連付けられてないチケット): {memberNotInEpicsHtml}<br>
+{notInEpicsHtml}<br>
+</body>
+</html>
+
+""".format(**vars())
+
+	filename = "menu.html"
+	with open(filename, "w") as f:
+		print(html, file=f)
+	print("[ProjectManager.createTasksHtml] OK. Wrote", filename)
+
+######################
 
 
 
+def run(projects, people, status_master, ticketLinkFun, css="", project_list_header="", schedule_header="",
+	statusFilename="status.html",
+	tasksFilename="tasks.html"):
 
-
-def run(projects, people, status_master, css="", project_list_header="", schedule_header="", filename="status.html"):
+	"""
+	people:
+		(Name, NameInTicketSystem)[]
+	ticketLinkFun:
+		epic : string, assignee : string, label : string -> url : string
+	"""
 	codeNames = {}
 	for p in projects:
 		codeNames.setdefault(p.codeName, 0)
@@ -411,14 +490,15 @@ def run(projects, people, status_master, css="", project_list_header="", schedul
 	
 	for i, p in enumerate(projects):
 		p.index = i
-		if p.owner and p.owner not in people:
-			people.append(p.owner)
+		names = [ name for name, _ in people ]
+		if p.owner and p.owner not in names:
+			people.append((p.owner, ""))
 	people = list(set(people))
 
 	schedule = assign(projects, people)
 
-	projectsHtml = genProjectListHtml(projects, status_master)
-	scheduleHtml = genScheduleHtml(projects, schedule, people)
+	projectsHtml = genProjectListHtml(projects, status_master, ticketLinkFun)
+	scheduleHtml = genScheduleHtml(projects, schedule, people, ticketLinkFun)
 
 	css = """
 body {
@@ -492,9 +572,15 @@ table.schedule tr td {
 </html>
 """.format(**vars())
 
-	with open(filename, "w") as f:
+	with open(statusFilename, "w") as f:
 		print(html, file=f)
-	print("[ProjectManager.run] OK. Wrote", filename)
+	print("[ProjectManager.run] OK. Wrote", statusFilename)
+
+	titleAndEpics = [(p.title, p.epic) for p in sorted(projects, key=lambda p: p.priority) if p.epic and not p.isDone()]
+	members = [ name for _, name in people if name]
+	createTasksHtml(titleAndEpics, members, ticketLinkFun)
+
+
 
 
 

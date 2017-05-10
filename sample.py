@@ -146,7 +146,9 @@ schedule_header = """
 </ul>
 """
 
-people = "Alice".split()
+people = [
+	("Alice", "Alice"),
+]
 status_master = [
 	("Lab", "原理検討"),
 	("Req", "関係者との要件合意"),
@@ -156,7 +158,11 @@ status_master = [
 	("DeployProduction", "本番投入"),
 	("End", "完了"),
 ]
+
+def ticketLinkFun(epic="", assignee="", label="", notInEpics=[]):
+	return ""
+
 # プロジェクト一覧, スケジュールが含まれる sample.html を生成する
 filename = "sample.html"
-ProjectManager.run(projects, people, status_master, css, project_list_header, schedule_header, filename)
+ProjectManager.run(projects, people, status_master, ticketLinkFun, css, project_list_header, schedule_header, filename)
 
