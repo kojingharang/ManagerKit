@@ -13,6 +13,11 @@ def expandStatusValue(v):
 		v = (v, None)
 	return v
 
+def formatDate(d):
+	if not d:
+		return "????-??-??"
+	return "{0:%Y-%m-%d}".format(d)
+
 """
 title:
 	プロジェクト名
@@ -72,6 +77,14 @@ class Project:
 
 	def fixed(self):
 		return self.owner != "" and self.startDate is not None and self.endDate is not None
+
+	def getMilestones(self, status_master):
+		"""
+		return (datetime.date, label)[]
+		"""
+		sm = dict(status_master)
+		rv = [ (v[1], self.title+" "+sm[k]+" (主担当: "+self.owner+")") for k, v in self.status.items() ] + self.milestones
+		return list(filter(lambda v: v[0], rv))
 
 colorDone = "#DDFADE"
 colorDoing = "#E0F0FF"
@@ -136,12 +149,26 @@ def statusCell(st, name, label):
 	return """<td style="{style}">{text}</td>""".format(**vars())
 
 def genProjectListHtml(projects, status_master, ticketLinkFun):
+
+	### Generate milestone list
+	milestones = sorted(sum([ p.getMilestones(status_master) for p in projects], []))
+	s = "\n".join([ "<li>"+formatDate(d)+" "+s+"</li><br>" for d, s in milestones if datetime.date.today() <= d])
+	html = """
+<ul>
+<li>今後のマイルストーン一覧</li>
+<ul>
+{s}
+</ul>
+</ul>
+	""".format(**vars())
+
+	### Generate project list
 	def sortFun(v):
 		return v.priority + (1000 if v.isDone() else 0) + (500 if v.blocking else 0)
 	projects = sorted(projects, key=sortFun)
 
 	statusTitles = "".join([ """<td style="width: 5%;">{label}</td>""".format(**vars()) for name, label in status_master])
-	html = """
+	html += """
 <html><body><table class="projects">
 <tr class="title">
 	<td style="width: 5%;">番号</td>
