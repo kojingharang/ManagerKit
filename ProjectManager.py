@@ -148,11 +148,17 @@ def statusCell(st, name, label):
 		text = "<span style='font-size: 0.7em;'>{endDate.year:04}-{endDate.month:02}-{endDate.day:02}</span>".format(**vars())
 	return """<td style="{style}">{text}</td>""".format(**vars())
 
-def genProjectListHtml(projects, status_master, ticketLinkFun):
+def genProjectListHtml(projects, status_master, ticketLinkFun, additional_milestones):
 
 	### Generate milestone list
-	milestones = sorted(sum([ p.getMilestones(status_master) for p in projects], []))
-	s = "\n".join([ "<li>"+formatDate(d)+" "+s+"</li><br>" for d, s in milestones if datetime.date.today() <= d])
+	# milestones: (datetime.date, label)[]
+	milestones = sum([ p.getMilestones(status_master) for p in projects], []) + additional_milestones
+	milestones = sorted(milestones)
+	s = []
+	for d, l in milestones:
+		color = "black" if datetime.date.today() <= d else "#c0c0c0"
+		s.append("<li style='color:"+color+"'>"+formatDate(d)+" "+l+"</li><br>")
+	s = "\n".join(s)
 	html = """
 <ul>
 <li>今後のマイルストーン一覧</li>
@@ -276,7 +282,7 @@ def assign(projects, people):
 		if phase=="canStart":
 			for k in freeDates:
 				freeDates[k] = max(freeDates[k], datetime.date.today())
-		for p in sorted(projects, key=lambda v: (v.priority, v.title)):
+		for i, p in enumerate(sorted(projects, key=lambda v: (v.priority, v.title))):
 			if phase!="blocking" and p.blocking:
 				continue
 			if phase=="startDateFixed" and p.startDate is None:
@@ -306,7 +312,8 @@ def assign(projects, people):
 			origEndDate = p.endDate
 			if p.blocking:
 				# Later
-				p.startDate = datetime.date.today() + datetime.timedelta(365*3)
+				p.startDate = datetime.date.today() + datetime.timedelta(365*3+i*30)
+				p.endDate = p.startDate + datetime.timedelta(30)
 			if p.startDate is None:
 				p.startDate = freeDates[person]
 			if p.endDate is None:
@@ -494,13 +501,16 @@ Members (管理Epicに関連付けられてないチケット): {memberNotInEpic
 
 def run(projects, people, status_master, ticketLinkFun, css="", project_list_header="", schedule_header="",
 	statusFilename="status.html",
-	tasksFilename="tasks.html"):
+	tasksFilename="tasks.html",
+	additional_milestones=[]):
 
 	"""
 	people:
 		(Name, NameInTicketSystem)[]
 	ticketLinkFun:
 		epic : string, assignee : string, label : string -> url : string
+	milestones:
+		(datetime.date, label)[]
 	"""
 	codeNames = {}
 	for p in projects:
@@ -524,7 +534,7 @@ def run(projects, people, status_master, ticketLinkFun, css="", project_list_hea
 
 	schedule = assign(projects, people)
 
-	projectsHtml = genProjectListHtml(projects, status_master, ticketLinkFun)
+	projectsHtml = genProjectListHtml(projects, status_master, ticketLinkFun, additional_milestones)
 	scheduleHtml = genScheduleHtml(projects, schedule, people, ticketLinkFun)
 
 	css = """
