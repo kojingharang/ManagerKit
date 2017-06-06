@@ -3,6 +3,7 @@ import datetime
 import pprint
 import sys
 import copy
+import json
 
 def expandStatusValue(v):
 	"""
@@ -29,11 +30,11 @@ status:
 	"" : 未着手
 	"o" : 作業中
 	"v" : 完了
-days:
-	完了までの想定作業日数
 startDate:
 	着手開始日
 	"" | "yyyy-mm-dd"
+endDate
+	完了日
 blocking:
 	着手できない理由
 doc:
@@ -145,10 +146,14 @@ def statusCell(st, name, label):
 		style = "background-color: {col};".format(**vars())
 	text = " "
 	if endDate:
-		text = "<span style='font-size: 0.7em;'>{endDate.year:04}-{endDate.month:02}-{endDate.day:02}</span>".format(**vars())
+		tentative = "<br>(仮)" if datetime.date.today() <= endDate else ""
+		text = "<span style='font-size: 0.7em;'>{endDate.year:04}-{endDate.month:02}-{endDate.day:02}{tentative}</span>".format(**vars())
 	return """<td style="{style}">{text}</td>""".format(**vars())
 
-def genProjectListHtml(projects, status_master, ticketLinkFun, additional_milestones):
+def genProjectListHtml(projects, status_master, ticketLinkFun, additional_milestones, getLabels):
+	"""
+	getLabels: index:int, project -> label[]
+	"""
 
 	### Generate milestone list
 	# milestones: (datetime.date, label)[]
@@ -157,7 +162,8 @@ def genProjectListHtml(projects, status_master, ticketLinkFun, additional_milest
 	s = []
 	for d, l in milestones:
 		color = "black" if datetime.date.today() <= d else "#c0c0c0"
-		s.append("<li style='color:"+color+"'>"+formatDate(d)+" "+l+"</li><br>")
+		tentative = " (仮)" if datetime.date.today() <= d else ""
+		s.append("<li style='color:"+color+"'>"+formatDate(d)+tentative+" "+l+"</li><br>")
 	s = "\n".join(s)
 	html = """
 <ul>
@@ -166,6 +172,8 @@ def genProjectListHtml(projects, status_master, ticketLinkFun, additional_milest
 {s}
 </ul>
 </ul>
+
+<div id="filters">フィルタ (AND): </div>
 	""".format(**vars())
 
 	### Generate project list
@@ -187,13 +195,11 @@ def genProjectListHtml(projects, status_master, ticketLinkFun, additional_milest
 </tr>
 """.format(**vars())
 
+	labels = {}
 	for i, p in enumerate(projects):
 		if p.startDate:
 			startS = "{0:%Y-%m-%d}".format(p.startDate)
 			endS = "{0:%Y-%m-%d}".format(p.endDate)
-		else:
-			startS = "未定"
-			endS = "{p.days}日間".format(**vars())
 		schedule = "{startS}<br>〜{endS}".format(**vars())
 		if p.isDone():
 			schedule = ""
@@ -215,11 +221,21 @@ def genProjectListHtml(projects, status_master, ticketLinkFun, additional_milest
 			link = ticketLinkFun(p.epic)
 			style = """background-color: darkgreen; color: white; text-decoration: none; font-size: 0.8em; padding: 4px; border-radius: 10px;"""
 			tasks = """<a href="{link}" target="_blank" style="{style}">Tasks</a>""".format(**vars())
+		odd = "odd" if i%2==0 else ""
+		id = "project%04d" % i
+		labels[id] = getLabels(i, p)
 		html += """
-<tr style="background-color: {trCol}">
+<tr style="background-color: {trCol}" id="{id}">
 	<td>{index}</td>
 	<td>{p.priority}</td>
-	<td><span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">{p.codeName}</span> {tasks}<br>{title}</td>
+	<td>
+		<a name="{p.codeName}"></a>
+		<span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">
+			<a style="text-decoration: none;" href="#{p.codeName}">{p.codeName}</a>
+		</span>
+		 {tasks}<br>
+		 {title}
+	</td>
 	{statusTitles}
 	<td>{p.owner}{owner_note}</td>
 	<td>{p.doc}{doc_note}<span style="color: red;">{p.blocking}</span></td>
@@ -229,7 +245,7 @@ def genProjectListHtml(projects, status_master, ticketLinkFun, additional_milest
 	html += """
 </table></body></html>
 """
-	return html
+	return html, labels
 
 def Xsect(p0, p1):
 #	return Xsect(p0.startDate, p0.endDate, p1.startDate, p1.endDate)
@@ -263,6 +279,11 @@ def isClone(name):
 	return any([str(i) in name for i in range(10)])
 
 def assign(projects, people):
+	"""
+	return
+		Dict
+			person -> project[]
+	"""
 	# 担当者に割り当てた上で各PJがいつ終わるかというスケジュール表(担当者 x PJの表)
 	# TODO startDate がきまってるやつを最初に置く
 	# 担当者 -> 着手可能日付
@@ -317,7 +338,7 @@ def assign(projects, people):
 			if p.startDate is None:
 				p.startDate = freeDates[person]
 			if p.endDate is None:
-				p.endDate = p.startDate + datetime.timedelta(p.days)
+				p.endDate = p.startDate + datetime.timedelta(90)
 
 			if not dupCheck(p, projects):
 				p.startDate = origStartDate
@@ -345,6 +366,11 @@ def assign(projects, people):
 	return schedule
 
 def genScheduleHtml(projects, schedule, people, ticketLinkFun):
+	"""
+	schedule
+		Dict
+			person -> project[]
+	"""
 	# date x 担当者
 	allDates = [ d for ps in schedule.values() for p in ps for d in [p.startDate, p.endDate]]
 	minDate = min(allDates)
@@ -375,6 +401,8 @@ def genScheduleHtml(projects, schedule, people, ticketLinkFun):
 
 	# プロジェクト設置
 	for i, (person, ps) in enumerate(sorted(schedule.items())):
+		if person not in [p for p, _ in people]:
+			continue
 		for p in ps:
 #			print(p.startDate, p.endDate)
 			si = p.startDate.toordinal()
@@ -502,7 +530,8 @@ Members (管理Epicに関連付けられてないチケット): {memberNotInEpic
 def run(projects, people, status_master, ticketLinkFun, css="", project_list_header="", schedule_header="",
 	statusFilename="status.html",
 	tasksFilename="tasks.html",
-	additional_milestones=[]):
+	additional_milestones=[],
+	getLabels=lambda i, p: []):
 
 	"""
 	people:
@@ -534,7 +563,7 @@ def run(projects, people, status_master, ticketLinkFun, css="", project_list_hea
 
 	schedule = assign(projects, people)
 
-	projectsHtml = genProjectListHtml(projects, status_master, ticketLinkFun, additional_milestones)
+	projectsHtml, labels = genProjectListHtml(projects, status_master, ticketLinkFun, additional_milestones, getLabels)
 	scheduleHtml = genScheduleHtml(projects, schedule, people, ticketLinkFun)
 
 	css = """
@@ -568,6 +597,15 @@ table.schedule {
 table.schedule tr td {
 	padding: 0;
 }
+#filters {
+	padding: 20px;
+}
+span.filter {
+	cursor: pointer;
+	padding: 20px;
+	border-radius: 40px;
+	margin: 10px;
+}
 """ + css
 
 	example = """
@@ -578,13 +616,76 @@ table.schedule tr td {
 </tr></table>
 """.format(**globals())
 
+	projectLabels = json.dumps(labels)
+	labelsMaster = getLabels(0, None)
+	filters = json.dumps([ name for name, label in labelsMaster ])
+	filterLabels = json.dumps([ label for name, label in labelsMaster ])
+
+	vs = """
+// Master data
+var filters = {filters};
+var filterLabels = {filterLabels};
+var projectLabels = {projectLabels};
+""".format(**vars())
+
+	ready = vs + """
+// フィルタ状態: name -> bool
+var filterEnabled = {};
+
+// フィルタ状態を反映
+function applyFilters() {
+	Object.keys(projectLabels).forEach(function(eid) {
+		var labels = projectLabels[eid];
+//		console.log(eid, labels);
+		var show = true;
+		// Check all enabled filters are in labels
+		for(var fi=0;fi<filters.length;fi++) {
+			if(filterEnabled[filters[fi]]) {
+				var lok = 0;
+				for(var li=0;li<labels.length;li++) {
+					if(labels[li] == filters[fi]) lok=1;
+				}
+				if(!lok) show=false;
+			}
+		}
+//		console.log(show);
+		$("#"+eid).toggle(show);
+	});
+	for(var i=0;i<filters.length;i++) {
+		$(".filter#"+filters[i]).css({"background-color": filterEnabled[filters[i]] ? "#aaffaa" : "#eeeeee"});
+	}
+//	console.log(filterEnabled);
+}
+$(document).ready(function(){
+	// フィルタボタンを作る
+	var html = "";
+	for(var i=0;i<filters.length;i++) {
+		var name = filters[i];
+		html += '<span class="filter" id="'+name+'">'+filterLabels[i]+'</span>';
+	}
+	$("#filters").html($("#filters").html() + html);
+
+	// フィルタの適用切り替え
+	$(".filter").on("click", function(event) {
+		var name = $(event.target).attr("id");
+		filterEnabled[name] = !filterEnabled[name];
+		applyFilters();
+	});
+	applyFilters();
+});
+"""
+
 	html = """
 <html>
 <head>
 <meta charset="utf-8" />
+<script type="text/javascript" src="jquery-3.2.1.min.js"></script>
 <style>
 {css}
 </style>
+<script>
+{ready}
+</script>
 </head>
 <body>
 

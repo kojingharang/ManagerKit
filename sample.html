@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8" />
+<script type="text/javascript" src="jquery-3.2.1.min.js"></script>
 <style>
 
 body {
@@ -34,12 +35,74 @@ table.schedule {
 table.schedule tr td {
 	padding: 0;
 }
+#filters {
+	padding: 20px;
+}
+span.filter {
+	cursor: pointer;
+	padding: 20px;
+	border-radius: 40px;
+	margin: 10px;
+}
 
 .grad {
 	background: linear-gradient(to bottom, rgba(62,140,72,1) 0%,rgba(68,148,80,1) 50%,rgba(43,119,54,1) 51%,rgba(34,112,44,1) 100%);
 }
 
 </style>
+<script>
+
+// Master data
+var filters = [];
+var filterLabels = [];
+var projectLabels = {"project0001": [], "project0002": [], "project0003": [], "project0000": []};
+
+// フィルタ状態: name -> bool
+var filterEnabled = {};
+
+// フィルタ状態を反映
+function applyFilters() {
+	Object.keys(projectLabels).forEach(function(eid) {
+		var labels = projectLabels[eid];
+//		console.log(eid, labels);
+		var show = true;
+		// Check all enabled filters are in labels
+		for(var fi=0;fi<filters.length;fi++) {
+			if(filterEnabled[filters[fi]]) {
+				var lok = 0;
+				for(var li=0;li<labels.length;li++) {
+					if(labels[li] == filters[fi]) lok=1;
+				}
+				if(!lok) show=false;
+			}
+		}
+//		console.log(show);
+		$("#"+eid).toggle(show);
+	});
+	for(var i=0;i<filters.length;i++) {
+		$(".filter#"+filters[i]).css({"background-color": filterEnabled[filters[i]] ? "#aaffaa" : "#eeeeee"});
+	}
+//	console.log(filterEnabled);
+}
+$(document).ready(function(){
+	// フィルタボタンを作る
+	var html = "";
+	for(var i=0;i<filters.length;i++) {
+		var name = filters[i];
+		html += '<span class="filter" id="'+name+'">'+filterLabels[i]+'</span>';
+	}
+	$("#filters").html($("#filters").html() + html);
+
+	// フィルタの適用切り替え
+	$(".filter").on("click", function(event) {
+		var name = $(event.target).attr("id");
+		filterEnabled[name] = !filterEnabled[name];
+		applyFilters();
+	});
+	applyFilters();
+});
+
+</script>
 </head>
 <body>
 
@@ -67,6 +130,8 @@ table.schedule tr td {
 
 </ul>
 </ul>
+
+<div id="filters">フィルタ (AND): </div>
 	
 <html><body><table class="projects">
 <tr class="title">
@@ -79,44 +144,72 @@ table.schedule tr td {
 	<td style="width: 10%;">作業期間(予定)</td>
 </tr>
 
-<tr style="background-color: white">
+<tr style="background-color: white" id="project0000">
 	<td>1</td>
 	<td>1</td>
-	<td><span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">BKK</span> <br>バンコク旅行</td>
+	<td>
+		<a name="BKK"></a>
+		<span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">
+			<a style="text-decoration: none;" href="#BKK">BKK</a>
+		</span>
+		 <br>
+		 バンコク旅行
+	</td>
 	<td style="background-color: #E0F0FF;"> </td><td style="background-color: #E0F0FF;"> </td><td style="background-color: #E0F0FF;"> </td><td style=""> </td><td style=""> </td><td style=""> </td><td style=""> </td>
 	<td>Foo</td>
 	<td><span style="color: red;"></span></td>
-	<td style="font-size: 0.5em;background-color: #E0F0FF;">2017-05-12<br>〜2017-07-11</td>
+	<td style="font-size: 0.5em;background-color: #E0F0FF;">2017-06-06<br>〜2017-09-04</td>
 </tr>
 
-<tr style="background-color: #f0f0f0">
+<tr style="background-color: #f0f0f0" id="project0001">
 	<td>2</td>
 	<td>2</td>
-	<td><span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">SING</span> <br>シンガポール旅行</td>
+	<td>
+		<a name="SING"></a>
+		<span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">
+			<a style="text-decoration: none;" href="#SING">SING</a>
+		</span>
+		 <br>
+		 シンガポール旅行
+	</td>
 	<td style="background-color: #E0F0FF;"> </td><td style="background-color: #E0F0FF;"> </td><td style="background-color: #E0F0FF;"> </td><td style=""> </td><td style=""> </td><td style=""> </td><td style=""> </td>
 	<td>Foo</td>
 	<td><span style="color: red;"></span></td>
-	<td style="font-size: 0.5em;">2017-07-12<br>〜2017-08-11</td>
+	<td style="font-size: 0.5em;">2017-09-05<br>〜2017-12-04</td>
 </tr>
 
-<tr style="background-color: white">
+<tr style="background-color: white" id="project0002">
 	<td>3</td>
 	<td>3</td>
-	<td><span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">HK</span> <br>香港旅行</td>
+	<td>
+		<a name="HK"></a>
+		<span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">
+			<a style="text-decoration: none;" href="#HK">HK</a>
+		</span>
+		 <br>
+		 香港旅行
+	</td>
 	<td style="background-color: #DDFADE;"> </td><td style="background-color: #DDFADE;"> </td><td style="background-color: #E0F0FF;"> </td><td style="background-color: #E0F0FF;"> </td><td style="background-color: #E0F0FF;"> </td><td style=""> </td><td style=""> </td>
 	<td>Alice(仮)</td>
 	<td>(TODO 主担当決め)<span style="color: red;"></span></td>
-	<td style="font-size: 0.5em;background-color: #E0F0FF;">2017-04-01<br>〜2017-07-30</td>
+	<td style="font-size: 0.5em;background-color: #E0F0FF;">2017-04-01<br>〜2017-06-30</td>
 </tr>
 
-<tr style="background-color: #f0f0f0">
+<tr style="background-color: #f0f0f0" id="project0003">
 	<td>4</td>
 	<td>3.4</td>
-	<td><span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">BKK2</span> <br>バンコク旅行</td>
+	<td>
+		<a name="BKK2"></a>
+		<span style="font-size: 0.8em; font-weight: bold; color: #5050c0;">
+			<a style="text-decoration: none;" href="#BKK2">BKK2</a>
+		</span>
+		 <br>
+		 バンコク旅行
+	</td>
 	<td style="background-color: #DDFADE;"> </td><td style="background-color: #DDFADE;"> </td><td style="background-color: #E0F0FF;"> </td><td style="background-color: #E0F0FF;"> </td><td style="background-color: #E0F0FF;"> </td><td style=""> </td><td style=""> </td>
 	<td>Bar</td>
 	<td><span style="color: red;"></span></td>
-	<td style="font-size: 0.5em;background-color: #E0F0FF;">2017-05-12<br>〜2017-07-11</td>
+	<td style="font-size: 0.5em;background-color: #E0F0FF;">2017-06-06<br>〜2017-09-04</td>
 </tr>
 
 </table></body></html>
@@ -132,10 +225,10 @@ table.schedule tr td {
 
 
 <table class='schedule'><tr><td style=''></td><td style='width: %f; background-color: #e0e0e0'>Alice</td><td style='width: %f; background-color: #e0e0e0'>Bar</td><td style='width: %f; background-color: #e0e0e0'>Foo</td></tr><tr><td style=''></td><td style=''></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-04-01</td><td style='font-size: 1em;width: 31.666666666666668%; background-color: #e5ffff;'>香港旅行<br>
-					<span style="font-size: 0.8em;"></span><br><span style="color: red;"></span></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-04-15</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-04-30</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #c0ffff;'>2017-05-01</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #c0ffff;'>2017-05-12</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='font-size: 1em;width: 31.666666666666668%; background-color: #f2e5ff;'>バンコク旅行<br>
+					<span style="font-size: 0.8em;"></span><br><span style="color: red;"></span></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-04-15</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-04-30</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-05-01</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-05-15</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-05-30</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #c0ffff;'>2017-06-01</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style=''></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #c0ffff;'>2017-06-06</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='font-size: 1em;width: 31.666666666666668%; background-color: #f2e5ff;'>バンコク旅行<br>
 					<span style="font-size: 0.8em;"></span><br><span style="color: red;"></span></td><td style='font-size: 1em;width: 31.666666666666668%; background-color: #ffe5e5;'>バンコク旅行<br>
-					<span style="font-size: 0.8em;"></span><br><span style="color: red;"></span></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #c0ffff;'>2017-05-15</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #c0ffff;'>2017-05-30</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-06-01</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style=''></td><td style='width: %f; background-color: #e0e0e0'>Alice</td><td style='width: %f; background-color: #e0e0e0'>Bar</td><td style='width: %f; background-color: #e0e0e0'>Foo</td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-06-15</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-06-30</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-07-01</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-07-11</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-07-12</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style='font-size: 1em;width: 31.666666666666668%; background-color: #f2ffe5;'>シンガポール旅行<br>
-					<span style="font-size: 0.8em;"></span><br><span style="color: red;"></span></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-07-15</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-07-30</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-08-01</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-08-11</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr></table>
+					<span style="font-size: 0.8em;"></span><br><span style="color: red;"></span></td></tr><tr><td style=''></td><td style='width: %f; background-color: #e0e0e0'>Alice</td><td style='width: %f; background-color: #e0e0e0'>Bar</td><td style='width: %f; background-color: #e0e0e0'>Foo</td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #c0ffff;'>2017-06-15</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #c0ffff;'>2017-06-30</td><td style='width: 31.666666666666668%; background-color: #e5ffff;'></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-07-01</td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-07-15</td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-07-30</td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-08-01</td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-08-15</td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-08-30</td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-09-01</td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style=''></td><td style='width: %f; background-color: #e0e0e0'>Alice</td><td style='width: %f; background-color: #e0e0e0'>Bar</td><td style='width: %f; background-color: #e0e0e0'>Foo</td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-09-04</td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2e5ff;'></td><td style='width: 31.666666666666668%; background-color: #ffe5e5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-09-05</td><td style=''></td><td style=''></td><td style='font-size: 1em;width: 31.666666666666668%; background-color: #f2ffe5;'>シンガポール旅行<br>
+					<span style="font-size: 0.8em;"></span><br><span style="color: red;"></span></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-09-15</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-09-30</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-10-01</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-10-15</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-10-30</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-11-01</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-11-15</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: #e0e0e0;'>2017-11-30</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-12-01</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr><tr><td style='vertical-align: top; width: 5%; font-size: 3px; background-color: white;'>2017-12-04</td><td style=''></td><td style=''></td><td style='width: 31.666666666666668%; background-color: #f2ffe5;'></td></tr></table>
 
 <hr>
 <a href="https://github.com/kojingharang/ManagerKit/blob/master/ProjectManager.py">Source</a>
